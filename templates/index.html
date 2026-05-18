@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#4f8ef7">
+<title>CalcMaster – Python Calculator</title>
+<style>
+  :root {
+    --accent: #4f8ef7;
+    --accent-dark: #3a75d8;
+    --bg: #f4f5fa;
+    --card: #fff;
+    --border: #e2e4ed;
+    --text: #1a1b1e;
+    --muted: #6b7080;
+    --success: #3b6d11;
+    --danger: #e24b4a;
+    --warn: #ba7517;
+    --key-num: #fff;
+    --key-fn: #eaedf5;
+    --key-op: #d0e0fd;
+    --radius: 14px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.07);
+  }
+  [data-theme="dark"] {
+    --bg: #111213; --card: #1c1d20; --border: #2c2d32;
+    --text: #f0f0f0; --muted: #8a8b96; --key-num: #2a2b30;
+    --key-fn: #333540; --key-op: #1e3560;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', 'SF Pro Display', system-ui, sans-serif; min-height: 100vh; transition: background .3s, color .3s; }
+  .app { max-width: 500px; margin: 0 auto; padding-bottom: 80px; }
+
+  /* Header */
+  .header { display: flex; justify-content: space-between; align-items: center; padding: 20px 18px 0; }
+  .header h1 { font-size: 22px; font-weight: 800; letter-spacing: -.5px; }
+  .header p { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .theme-btn { background: var(--card); border: 1.5px solid var(--border); border-radius: 12px; width: 44px; height: 44px; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: .15s; }
+
+  /* Nav */
+  .nav { display: flex; gap: 8px; padding: 14px 18px; overflow-x: auto; scrollbar-width: none; }
+  .nav::-webkit-scrollbar { display: none; }
+  .nav-btn { flex-shrink: 0; display: flex; align-items: center; gap: 6px; padding: 10px 16px; border-radius: 14px; border: 1.5px solid var(--border); background: var(--card); color: var(--text); font-weight: 700; font-size: 13px; cursor: pointer; white-space: nowrap; transition: .15s; font-family: inherit; }
+  .nav-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* Panels */
+  .panel { display: none; padding: 4px 18px 0; animation: fadeIn .2s ease; }
+  .panel.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; } }
+
+  /* Form elements */
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 6px; letter-spacing: .03em; }
+  .input-wrap { position: relative; }
+  .input-wrap input, .input-wrap select { width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 10px; font-size: 16px; background: var(--card); color: var(--text); outline: none; transition: border .2s; font-family: inherit; appearance: none; -webkit-appearance: none; }
+  .input-wrap input:focus, .input-wrap select:focus { border-color: var(--accent); }
+  .input-wrap .unit { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); font-size: 13px; font-weight: 600; color: var(--muted); pointer-events: none; }
+  input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+  input[type="number"] { -moz-appearance: textfield; }
+
+  /* Buttons */
+  .btn { display: block; width: 100%; padding: 13px; border-radius: 11px; border: none; background: var(--accent); color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit; transition: .15s; margin-bottom: 16px; }
+  .btn:hover { background: var(--accent-dark); }
+  .btn:active { transform: scale(.97); }
+
+  /* Chip group */
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+  .chip { padding: 8px 14px; border-radius: 20px; border: 1.5px solid var(--border); background: var(--card); color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; transition: .15s; }
+  .chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* Result cards */
+  .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .result-card { background: var(--card); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+  .result-card.highlight { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .result-card.full { grid-column: span 2; }
+  .result-card .rl { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; margin-bottom: 6px; opacity: .75; }
+  .result-card .rv { font-size: 22px; font-weight: 800; font-family: monospace; letter-spacing: -.5px; }
+  .result-card:not(.highlight) .rl { color: var(--muted); }
+  .result-card:not(.highlight) .rv { color: var(--text); }
+
+  /* Error */
+  .error-box { background: #fef2f2; border: 1.5px solid #fca5a5; border-radius: 10px; padding: 12px 14px; color: #dc2626; font-size: 14px; margin-bottom: 12px; }
+  [data-theme="dark"] .error-box { background: #2d1515; border-color: #7f1d1d; color: #f87171; }
+
+  /* Progress bar */
+  .progress-wrap { margin-bottom: 8px; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .progress-bar { height: 8px; background: var(--border); border-radius: 99px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 99px; transition: width .5s ease; }
+
+  /* Basic calc */
+  .calc-display { background: var(--card); border: 1.5px solid var(--border); border-radius: 16px; padding: 16px 18px 12px; margin-bottom: 12px; }
+  .calc-expr { font-size: 13px; color: var(--muted); min-height: 20px; text-align: right; font-family: monospace; }
+  .calc-num { font-size: 40px; font-weight: 800; text-align: right; font-family: monospace; letter-spacing: -1px; word-break: break-all; }
+  .keypad { display: grid; gap: 8px; }
+  .keypad-row { display: grid; gap: 8px; }
+  .key { padding: 17px 8px; border: none; border-radius: 12px; font-size: 19px; font-weight: 700; cursor: pointer; font-family: inherit; transition: opacity .1s, transform .1s; }
+  .key:active { opacity: .7; transform: scale(.95); }
+  .key-num { background: var(--key-num); color: var(--text); }
+  .key-fn { background: var(--key-fn); color: var(--text); }
+  .key-op { background: var(--key-op); color: var(--accent); }
+  .key-eq { background: var(--accent); color: #fff; }
+  .history-section { margin-top: 14px; }
+  .history-title { font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; margin-bottom: 8px; }
+  .history-item { font-size: 13px; color: var(--muted); padding: 7px 0; border-bottom: 1px solid var(--border); font-family: monospace; }
+
+  /* BMI */
+  .bmi-display { border-radius: 16px; padding: 22px; text-align: center; margin-bottom: 14px; border: 2px solid; }
+  .bmi-val { font-size: 54px; font-weight: 800; font-family: monospace; }
+  .bmi-cat { font-size: 18px; font-weight: 700; margin-top: 4px; }
+  .bmi-table { background: var(--card); border: 1.5px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .bmi-row { display: flex; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .bmi-row:last-child { border-bottom: none; }
+
+  /* Unit converter */
+  .cat-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Header -->
+  <div class="header">
+    <div>
+      <h1>CalcMaster</h1>
+      <p id="subtitle">Basic Calculator</p>
+    </div>
+    <button class="theme-btn" onclick="toggleTheme()" title="Toggle dark mode">🌙</button>
+  </div>
+
+  <!-- Nav -->
+  <div class="nav" id="nav">
+    <button class="nav-btn active" data-panel="basic" onclick="switchPanel('basic')">➕ Basic</button>
+    <button class="nav-btn" data-panel="emi" onclick="switchPanel('emi')">🏦 EMI</button>
+    <button class="nav-btn" data-panel="bmi" onclick="switchPanel('bmi')">⚖️ BMI</button>
+    <button class="nav-btn" data-panel="pct" onclick="switchPanel('pct')">💯 %</button>
+    <button class="nav-btn" data-panel="ci" onclick="switchPanel('ci')">📈 C.Interest</button>
+    <button class="nav-btn" data-panel="age" onclick="switchPanel('age')">🎂 Age</button>
+    <button class="nav-btn" data-panel="unit" onclick="switchPanel('unit')">📐 Units</button>
+    <button class="nav-btn" data-panel="tip" onclick="switchPanel('tip')">🍽️ Tip</button>
+  </div>
+
+  <!-- ── BASIC CALCULATOR ── -->
+  <div class="panel active" id="panel-basic">
+    <div class="calc-display">
+      <div class="calc-expr" id="expr"></div>
+      <div class="calc-num" id="display">0</div>
+    </div>
+    <div class="keypad" id="keypad">
+      <div class="keypad-row" style="grid-template-columns:repeat(4,1fr)">
+        <button class="key key-fn" onclick="pressKey('C')">C</button>
+        <button class="key key-fn" onclick="pressKey('±')">±</button>
+        <button class="key key-fn" onclick="pressKey('%')">%</button>
+        <button class="key key-op" onclick="pressKey('/')">÷</button>
+      </div>
+      <div class="keypad-row" style="grid-template-columns:repeat(4,1fr)">
+        <button class="key key-num" onclick="pressKey('7')">7</button>
+        <button class="key key-num" onclick="pressKey('8')">8</button>
+        <button class="key key-num" onclick="pressKey('9')">9</button>
+        <button class="key key-op" onclick="pressKey('*')">×</button>
+      </div>
+      <div class="keypad-row" style="grid-template-columns:repeat(4,1fr)">
+        <button class="key key-num" onclick="pressKey('4')">4</button>
+        <button class="key key-num" onclick="pressKey('5')">5</button>
+        <button class="key key-num" onclick="pressKey('6')">6</button>
+        <button class="key key-op" onclick="pressKey('-')">−</button>
+      </div>
+      <div class="keypad-row" style="grid-template-columns:repeat(4,1fr)">
+        <button class="key key-num" onclick="pressKey('1')">1</button>
+        <button class="key key-num" onclick="pressKey('2')">2</button>
+        <button class="key key-num" onclick="pressKey('3')">3</button>
+        <button class="key key-op" onclick="pressKey('+')">+</button>
+      </div>
+      <div class="keypad-row" style="grid-template-columns:2fr 1fr 1fr">
+        <button class="key key-num" onclick="pressKey('0')">0</button>
+        <button class="key key-num" onclick="pressKey('.')">.</button>
+        <button class="key key-eq" onclick="pressKey('=')">=</button>
+      </div>
+    </div>
+    <div class="history-section" id="history-section" style="display:none">
+      <div class="history-title">History</div>
+      <div id="history-list"></div>
+    </div>
+  </div>
+
+  <!-- ── EMI ── -->
+  <div class="panel" id="panel-emi">
+    <div class="field"><label>Loan Amount</label><div class="input-wrap"><input type="number" id="emi-principal" value="500000" min="1"><span class="unit">₹</span></div></div>
+    <div class="field"><label>Annual Interest Rate</label><div class="input-wrap"><input type="number" id="emi-rate" value="8.5" min="0" step="0.1"><span class="unit">%</span></div></div>
+    <div class="field"><label>Tenure (months)</label><div class="input-wrap"><input type="number" id="emi-months" value="60" min="1" step="1"></div></div>
+    <button class="btn" onclick="calcEMI()">Calculate EMI</button>
+    <div id="emi-result"></div>
+  </div>
+
+  <!-- ── BMI ── -->
+  <div class="panel" id="panel-bmi">
+    <div class="chips">
+      <button class="chip active" id="bmi-metric" onclick="setBMIUnit('metric')">Metric (kg/cm)</button>
+      <button class="chip" id="bmi-imperial" onclick="setBMIUnit('imperial')">Imperial (lb/in)</button>
+    </div>
+    <div class="field"><label id="bmi-wlabel">Weight (kg)</label><div class="input-wrap"><input type="number" id="bmi-weight" min="1"><span class="unit" id="bmi-wunit">kg</span></div></div>
+    <div class="field"><label id="bmi-hlabel">Height (cm)</label><div class="input-wrap"><input type="number" id="bmi-height" min="1"><span class="unit" id="bmi-hunit">cm</span></div></div>
+    <button class="btn" onclick="calcBMI()">Calculate BMI</button>
+    <div id="bmi-result"></div>
+  </div>
+
+  <!-- ── PERCENTAGE ── -->
+  <div class="panel" id="panel-pct">
+    <div class="chips">
+      <button class="chip active" onclick="setPctMode('of_num',this)">X% of Y</button>
+      <button class="chip" onclick="setPctMode('what_pct',this)">X is ?% of Y</button>
+      <button class="chip" onclick="setPctMode('increase',this)">% Increase</button>
+      <button class="chip" onclick="setPctMode('decrease',this)">% Decrease</button>
+    </div>
+    <div class="field"><label id="pct-alabel">Percentage (X%)</label><div class="input-wrap"><input type="number" id="pct-a"></div></div>
+    <div class="field"><label id="pct-blabel">Of Number (Y)</label><div class="input-wrap"><input type="number" id="pct-b"></div></div>
+    <button class="btn" onclick="calcPct()">Calculate</button>
+    <div id="pct-result"></div>
+  </div>
+
+  <!-- ── COMPOUND INTEREST ── -->
+  <div class="panel" id="panel-ci">
+    <div class="field"><label>Principal Amount</label><div class="input-wrap"><input type="number" id="ci-principal" value="10000" min="1"><span class="unit">$</span></div></div>
+    <div class="field"><label>Annual Rate</label><div class="input-wrap"><input type="number" id="ci-rate" value="10" min="0" step="0.1"><span class="unit">%</span></div></div>
+    <div class="field"><label>Time (years)</label><div class="input-wrap"><input type="number" id="ci-time" value="5" min="0.5" step="0.5"></div></div>
+    <div class="field"><label>Compounding Frequency</label>
+      <div class="input-wrap">
+        <select id="ci-n">
+          <option value="1">Annually</option>
+          <option value="2">Semi-annually</option>
+          <option value="4">Quarterly</option>
+          <option value="12" selected>Monthly</option>
+          <option value="365">Daily</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn" onclick="calcCI()">Calculate</button>
+    <div id="ci-result"></div>
+  </div>
+
+  <!-- ── AGE ── -->
+  <div class="panel" id="panel-age">
+    <div class="field"><label>Date of Birth</label><div class="input-wrap"><input type="date" id="age-dob" max="today"></div></div>
+    <button class="btn" onclick="calcAge()">Calculate Age</button>
+    <div id="age-result"></div>
+  </div>
+
+  <!-- ── UNIT CONVERTER ── -->
+  <div class="panel" id="panel-unit">
+    <div class="cat-chips" id="unit-cats"></div>
+    <div class="field"><label>Value</label><div class="input-wrap"><input type="number" id="unit-val" placeholder="Enter value"></div></div>
+    <div class="field"><label>From</label><div class="input-wrap"><select id="unit-from"></select></div></div>
+    <div class="field"><label>To</label><div class="input-wrap"><select id="unit-to"></select></div></div>
+    <button class="btn" onclick="calcUnit()">Convert</button>
+    <div id="unit-result"></div>
+  </div>
+
+  <!-- ── TIP ── -->
+  <div class="panel" id="panel-tip">
+    <div class="field"><label>Bill Amount</label><div class="input-wrap"><input type="number" id="tip-bill" min="0" step="0.01" placeholder="0.00"><span class="unit">$</span></div></div>
+    <div class="field">
+      <label>Tip Percentage</label>
+      <div class="chips" style="margin-bottom:8px">
+        <button class="chip" onclick="setTip(10,this)">10%</button>
+        <button class="chip active" onclick="setTip(15,this)">15%</button>
+        <button class="chip" onclick="setTip(18,this)">18%</button>
+        <button class="chip" onclick="setTip(20,this)">20%</button>
+        <button class="chip" onclick="setTip(25,this)">25%</button>
+      </div>
+      <div class="input-wrap"><input type="number" id="tip-pct" value="15" min="0" step="1"><span class="unit">%</span></div>
+    </div>
+    <div class="field"><label>Number of People</label><div class="input-wrap"><input type="number" id="tip-people" value="1" min="1" step="1"></div></div>
+    <button class="btn" onclick="calcTip()">Calculate Tip</button>
+    <div id="tip-result"></div>
+  </div>
+</div>
+
+<script>
+// ── THEME ──
+let dark = localStorage.getItem('theme') === 'dark';
+function toggleTheme() {
+  dark = !dark;
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : '');
+  document.querySelector('.theme-btn').textContent = dark ? '☀️' : '🌙';
+  localStorage.setItem('theme', dark ? 'dark' : 'light');
+}
+if (dark) { document.documentElement.setAttribute('data-theme', 'dark'); document.querySelector('.theme-btn').textContent = '☀️'; }
+
+// ── NAV ──
+const subtitles = { basic:'Basic Calculator', emi:'EMI Calculator', bmi:'BMI Calculator', pct:'Percentage Calculator', ci:'Compound Interest', age:'Age Calculator', unit:'Unit Converter', tip:'Tip Calculator' };
+function switchPanel(id) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.panel === id));
+  document.getElementById('panel-' + id).classList.add('active');
+  document.getElementById('subtitle').textContent = subtitles[id];
+}
+
+// ── HELPERS ──
+function fmt(n, decimals = 2) {
+  if (Math.abs(n) >= 1e6) return n.toLocaleString('en-US', { maximumFractionDigits: decimals });
+  return parseFloat(n.toFixed(decimals)).toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+function errBox(msg) { return `<div class="error-box">⚠️ ${msg}</div>`; }
+function resultCard(label, value, highlight = false, full = false) {
+  return `<div class="result-card ${highlight ? 'highlight' : ''} ${full ? 'full' : ''}"><div class="rl">${label}</div><div class="rv">${value}</div></div>`;
+}
+function progressBar(label, value, pct, color) {
+  return `<div class="progress-wrap"><div class="progress-label"><span>${label}</span><span>${pct}%</span></div><div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${color}"></div></div></div>`;
+}
+
+async function post(url, data) {
+  const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+  return res.json();
+}
+
+// ── BASIC CALCULATOR ──
+let calcDisplay = '0', calcExpr = '', calcNewNum = true, calcHistory = [];
+function updateDisplay() {
+  document.getElementById('display').textContent = calcDisplay;
+  document.getElementById('expr').textContent = calcExpr;
+}
+async function pressKey(k) {
+  if (k === 'C') { calcDisplay = '0'; calcExpr = ''; calcNewNum = true; updateDisplay(); return; }
+  if (k === '±') { calcDisplay = calcDisplay.startsWith('-') ? calcDisplay.slice(1) : '-' + calcDisplay; updateDisplay(); return; }
+  if (k === '%') { calcDisplay = String(parseFloat(calcDisplay) / 100); updateDisplay(); return; }
+  if (['+', '-', '*', '/'].includes(k)) { calcExpr = calcDisplay + ' ' + { '+': '+', '-': '−', '*': '×', '/': '÷' }[k] + ' '; calcNewNum = true; updateDisplay(); return; }
+  if (k === '.') { if (calcNewNum) { calcDisplay = '0.'; calcNewNum = false; } else if (!calcDisplay.includes('.')) { calcDisplay += '.'; } updateDisplay(); return; }
+  if (k === '=') {
+    if (!calcExpr) return;
+    const rawExpr = calcExpr.replace(/÷/g, '/').replace(/×/g, '*').replace(/−/g, '-') + calcDisplay;
+    const data = await post('/api/basic', { expression: rawExpr });
+    if (data.error) { calcDisplay = 'Error'; calcExpr = ''; calcNewNum = true; }
+    else {
+      const full = calcExpr + calcDisplay + ' = ' + data.result;
+      calcHistory.unshift(full);
+      if (calcHistory.length > 6) calcHistory.pop();
+      const hs = document.getElementById('history-section'), hl = document.getElementById('history-list');
+      hs.style.display = 'block';
+      hl.innerHTML = calcHistory.map(h => `<div class="history-item">${h}</div>`).join('');
+      calcDisplay = data.result; calcExpr = ''; calcNewNum = true;
+    }
+    updateDisplay(); return;
+  }
+  if (calcNewNum) { calcDisplay = k; calcNewNum = false; }
+  else { calcDisplay = calcDisplay === '0' ? k : calcDisplay + k; }
+  updateDisplay();
+}
+document.addEventListener('keydown', e => {
+  const map = { '0':'0','1':'1','2':'2','3':'3','4':'4','5':'5','6':'6','7':'7','8':'8','9':'9','+':'+','-':'-','*':'*','/':'/','Enter':'=','Backspace':'C','.':'.' };
+  if (map[e.key]) pressKey(map[e.key]);
+});
+
+// ── EMI ──
+async function calcEMI() {
+  const d = await post('/api/emi', { principal: document.getElementById('emi-principal').value, rate: document.getElementById('emi-rate').value, months: document.getElementById('emi-months').value });
+  const r = document.getElementById('emi-result');
+  if (d.error) { r.innerHTML = errBox(d.error); return; }
+  r.innerHTML = `
+    <div class="result-grid"><div class="result-card highlight full"><div class="rl">Monthly EMI</div><div class="rv">₹ ${fmt(d.emi)}</div></div></div>
+    <div class="result-grid">
+      ${resultCard('Total Amount', '₹ ' + fmt(d.total_amount))}
+      ${resultCard('Total Interest', '₹ ' + fmt(d.total_interest))}
+    </div>
+    <div class="result-card" style="margin-bottom:10px">
+      <div class="rl" style="margin-bottom:12px">Breakup</div>
+      ${progressBar('Principal', d.principal, d.principal_pct, '#4f8ef7')}
+      ${progressBar('Interest', d.total_interest, d.interest_pct, '#f7884f')}
+    </div>`;
+}
+
+// ── BMI ──
+let bmiUnit = 'metric';
+function setBMIUnit(u) {
+  bmiUnit = u;
+  document.getElementById('bmi-metric').classList.toggle('active', u === 'metric');
+  document.getElementById('bmi-imperial').classList.toggle('active', u === 'imperial');
+  document.getElementById('bmi-wlabel').textContent = u === 'metric' ? 'Weight (kg)' : 'Weight (lbs)';
+  document.getElementById('bmi-hlabel').textContent = u === 'metric' ? 'Height (cm)' : 'Height (inches)';
+  document.getElementById('bmi-wunit').textContent = u === 'metric' ? 'kg' : 'lb';
+  document.getElementById('bmi-hunit').textContent = u === 'metric' ? 'cm' : 'in';
+  document.getElementById('bmi-result').innerHTML = '';
+}
+async function calcBMI() {
+  const d = await post('/api/bmi', { weight: document.getElementById('bmi-weight').value, height: document.getElementById('bmi-height').value, unit: bmiUnit });
+  const r = document.getElementById('bmi-result');
+  if (d.error) { r.innerHTML = errBox(d.error); return; }
+  const wunit = bmiUnit === 'metric' ? 'kg' : 'lb';
+  r.innerHTML = `
+    <div class="bmi-display" style="border-color:${d.color};color:${d.color}">
+      <div class="bmi-val">${d.bmi}</div>
+      <div class="bmi-cat">${d.category}</div>
+      <div style="font-size:13px;opacity:.75;margin-top:6px">Ideal: ${d.ideal_min}–${d.ideal_max} ${wunit}</div>
+    </div>
+    <div class="bmi-table">
+      ${[['< 18.5','Underweight','#378add'],['18.5 – 24.9','Normal Weight','#3b6d11'],['25 – 29.9','Overweight','#ba7517'],['≥ 30','Obese','#e24b4a']].map(([range,label,color])=>`
+        <div class="bmi-row"><span style="color:${color};font-weight:700">${range}</span><span style="color:var(--muted)">${label}</span></div>`).join('')}
+    </div>`;
+}
+
+// ── PERCENTAGE ──
+let pctMode = 'of_num';
+const pctLabels = { of_num: ['Percentage (X%)', 'Of Number (Y)'], what_pct: ['Value (X)', 'Total (Y)'], increase: ['Original Value (X)', 'New Value (Y)'], decrease: ['Original Value (X)', 'New Value (Y)'] };
+function setPctMode(mode, btn) {
+  pctMode = mode;
+  document.querySelectorAll('#panel-pct .chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('pct-alabel').textContent = pctLabels[mode][0];
+  document.getElementById('pct-blabel').textContent = pctLabels[mode][1];
+  document.getElementById('pct-result').innerHTML = '';
+}
+async function calcPct() {
+  const d = await post('/api/percentage', { mode: pctMode, a: document.getElementById('pct-a').value, b: document.getElementById('pct-b').value });
+  const r = document.getElementById('pct-result');
+  if (d.error) { r.innerHTML = errBox(d.error); return; }
+  r.innerHTML = `<div class="result-grid"><div class="result-card highlight full"><div class="rl">${d.label}</div><div class="rv">${d.result}${d.suffix}</div></div></div>`;
+}
+
+// ── COMPOUND INTEREST ──
+async function calcCI() {
+  const d = await post('/api/compound', { principal: document.getElementById('ci-principal').value, rate: document.getElementById('ci-rate').value, time: document.getElementById('ci-time').value, n: document.getElementById('ci-n').value });
+  const r = document.getElementById('ci-result');
+  if (d.error) { r.innerHTML = errBox(d.error); return; }
+  r.innerHTML = `
+    <div class="result-grid"><div class="result-card highlight full"><div class="rl">Final Amount</div><div class="rv">$${fmt(d.amount)}</div></div></div>
+    <div class="result-grid">
+      ${resultCard('Principal', '$' + fmt(d.principal))}
+      ${resultCard('Interest Earned', '$' + fmt(d.interest))}
+    </div>`;
+}
+
+// ── AGE ──
+async function calcAge() {
+  const dob = document.getElementById('age-dob').value;
+  if (!dob) { document.getElementById('age-result').innerHTML = errBox('Please select your date of birth.'); return; }
+  const d = await post('/api/age', { dob });
+  const r = document.getElementById('age-result');
+  if (d.error) { r.innerHTML = errBox(d.error); return; }
+  r.innerHTML = `
+    <div class="result-card highlight full" style="text-align:center;margin-bottom:10px">
+      <div style="font-size:54px;font-weight:800;font-family:monospace">${d.years}</div>
+      <div style="font-size:17px;font-weight:700">Years Old</div>
+      <div style="font-size:13px;opacity:.8;margin-top:4px">${d.months} months, ${d.days} days</div>
+    </div>
+    <div class="result-grid">
+      ${resultCard('Total Days Lived', d.total_days.toLocaleString())}
+      ${resultCard('Days to Birthday', d.is_birthday ? '🎂 Today!' : d.days_to_birthday)}
+    </div>`;
+}
+
+// ── UNIT CONVERTER ──
+let unitCat = 'length', unitMeta = {};
+async function loadUnitMeta() {
+  unitMeta = await fetch('/api/unit_meta').then(r => r.json());
+  const catsDiv = document.getElementById('unit-cats');
+  const labels = { length:'Length', weight:'Weight', temperature:'Temperature', area:'Area', speed:'Speed', volume:'Volume' };
+  catsDiv.innerHTML = Object.keys(unitMeta).map(c => `<button class="chip ${c==='length'?'active':''}" onclick="setUnitCat('${c}',this)">${labels[c]||c}</button>`).join('');
+  populateUnitSelects('length');
+}
+function setUnitCat(cat, btn) {
+  unitCat = cat;
+  document.querySelectorAll('#unit-cats .chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  populateUnitSelects(cat);
+  document.getElementById('unit-result').innerHTML = '';
+}
+function populateUnitSelects(cat) {
+  const units = unitMeta[cat] || [];
+  const fromSel = document.getElementById('unit-from'), toSel = document.getElementById('unit-to');
+  fromSel.innerHTML = toSel.innerHTML = units.map(u => `<option value="${u}">${u}</option>`).join('');
+  if (units.length > 1) toSel.selectedIndex = 1;
+}
+async function calcUnit() {
+  const d = await post('/api/unit', { category: unitCat, from_unit: document.getElementById('unit-from').value, to_unit: document.getElementById('unit-to').value, value: document.getElementById('unit-val').value });
+  const r = document.getElementById('unit-result');
+  if (d.error) { r.innerHTML = errBox(d.error); return; }
+  const pretty = parseFloat(d.result.toPrecision ? d.result.toPrecision(8) : d.result);
+  r.innerHTML = `<div class="result-grid"><div class="result-card highlight full"><div class="rl">${d.value} ${d.from_unit} =</div><div class="rv">${pretty} ${d.to_unit}</div></div></div>`;
+}
+loadUnitMeta();
+
+// ── TIP ──
+function setTip(val, btn) {
+  document.getElementById('tip-pct').value = val;
+  document.querySelectorAll('#panel-tip .chips .chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+}
+async function calcTip() {
+  const d = await post('/api/tip', { bill: document.getElementById('tip-bill').value, tip_pct: document.getElementById('tip-pct').value, people: document.getElementById('tip-people').value });
+  const r = document.getElementById('tip-result');
+  if (d.error) { r.innerHTML = errBox(d.error); return; }
+  r.innerHTML = `
+    <div class="result-grid"><div class="result-card highlight full"><div class="rl">Total per Person</div><div class="rv">$${fmt(d.per_person)}</div></div></div>
+    <div class="result-grid">
+      ${resultCard('Tip Amount', '$' + fmt(d.tip_amount))}
+      ${resultCard('Bill + Tip', '$' + fmt(d.total))}
+    </div>
+    ${d.people > 1 ? `<div class="result-grid">${resultCard('Tip per Person', '$' + fmt(d.tip_per_person), false, true)}</div>` : ''}`;
+}
+</script>
+</body>
+</html>
